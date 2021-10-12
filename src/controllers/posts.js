@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
-
 import PostMessage from '../models/postMessage.js';
+import cloudinary from '../utils.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export const getPosts = async (req, res) => {
   try {
@@ -26,9 +29,26 @@ export const getPost = async (req, res) => {
 
 export const createPost = async (req, res) => {
   const post = req.body;
+  // console.log(post);
+  let uploadResponse;
+  try {
+    const fileStr = post.selectedFile;
 
+    if (!fileStr) return res.status(204).send('No File Selected');
+
+    uploadResponse = await cloudinary.uploader.upload(fileStr, {
+      upload_preset: process.env.CLOUDINARY_FOLDER,
+    });
+    // console.log(uploadResponse);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ err: 'Image not saved to Cloudinary' });
+  }
+
+  const newPost = { ...post, selectedFile: uploadResponse.public_id };
+  // console.log(newPost);
   const newPostMessage = new PostMessage({
-    ...post,
+    ...newPost,
     creator: req.userId,
     createdAt: new Date().toISOString(),
   });
